@@ -1,0 +1,36 @@
+[project]
+name = "cli"
+version = "0.1.0"
+description = "CLI (Command Line Interface) para trabajar con RAG (Retrieval-Augmented Generation) y enviar los resultados a la API OAuth2 de Hercules"
+authors = [
+    {name = "Guillermo Valdes",email = "guillermo@movimientolibre.com"}
+]
+license = {text = "AGPL3"}
+readme = "README.md"
+requires-python = ">=3.11"
+package-mode = false
+dependencies = [
+    "click (>=8.1.8,<9.0.0)",
+    "requests (>=2.32.3,<3.0.0)",
+    "python-dotenv (>=1.0.1,<2.0.0)",
+    "pypdf (>=5.1.0,<6.0.0)",
+    "openai (>=1.59.3,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+
+[tool.poetry.scripts]
+hercules = "cli.app:cli"
+
+[tool.black]
+line-length = 128
+
+[tool.isort]
+line_length = 128
+profile = "black"
