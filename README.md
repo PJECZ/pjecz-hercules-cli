@@ -43,6 +43,7 @@ OPENAI_PROMPT=""
 API_BASE_URL="http://localhost:8000"
 USERNAME="nombre@servidor.com"
 PASSWORD="XXXXXXXXXXXXXXXX"
+LIMIT=100
 TIMEOUT=20
 
 # Edictos
