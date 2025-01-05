@@ -1,5 +1,5 @@
 """
-Command Line Interface
+Hércules CLI (Command Line Interface)
 """
 
 import os

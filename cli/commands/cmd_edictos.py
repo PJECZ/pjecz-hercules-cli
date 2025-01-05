@@ -13,19 +13,17 @@ def cli():
     """Edictos"""
 
 
-@cli.command()
+@click.command()
 def analizar():
-    """Analizar una sentencia"""
-    click.echo("Analizando una sentencia")
+    """Analizar un edicto"""
+    click.echo("Analizando un edicto")
 
 
-@cli.command()
+@click.command()
 def sintetizar():
-    """Sintetizar una sentencia"""
-    click.echo("Sintetizando una sentencia")
+    """Sintetizar un edicto"""
+    click.echo("Sintetizando un edicto")
 
 
-@cli.command()
-def categorizar():
-    """Categorizar una sentencia"""
-    click.echo("Categorizando una sentencia")
+cli.add_command(analizar)
+cli.add_command(sintetizar)
