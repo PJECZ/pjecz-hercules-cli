@@ -1,5 +1,8 @@
 """
-Sentencias
+Cmd Sentencias
+
+- analizar
+- sintetizar
 """
 
 import json

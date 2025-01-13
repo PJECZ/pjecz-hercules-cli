@@ -1,5 +1,8 @@
 """
-Edictos
+Cmd Edictos
+
+- analizar
+- sintetizar
 """
 
 import os

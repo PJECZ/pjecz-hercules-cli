@@ -1,5 +1,9 @@
 """
-OpenAI
+Cmd OpenAI
+
+- preguntar
+- extraer
+- sintetizar
 """
 
 import os
