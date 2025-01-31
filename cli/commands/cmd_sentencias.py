@@ -64,7 +64,7 @@ def analizar(creado_desde, creado_hasta, sobreescribir):
     # Consultar las sentencias
     try:
         respuesta = requests.get(
-            url=f"{API_BASE_URL}/api/v1/sentencias",
+            url=f"{API_BASE_URL}/api/v5/sentencias",
             headers={"Authorization": f"Bearer {oauth2_token}"},
             params={"creado_desde": creado_desde, "creado_hasta": creado_hasta, "limit": LIMIT},
             timeout=TIMEOUT,
@@ -133,7 +133,7 @@ def analizar(creado_desde, creado_hasta, sobreescribir):
         # Enviar los datos RAG
         try:
             respuesta = requests.put(
-                url=f"{API_BASE_URL}/api/v1/sentencias/rag",
+                url=f"{API_BASE_URL}/api/v5/sentencias/rag",
                 headers={"Authorization": f"Bearer {oauth2_token}"},
                 data=json.dumps(data),
                 timeout=TIMEOUT,
@@ -192,7 +192,7 @@ def sintetizar(creado_desde, creado_hasta, sobreescribir):
     # Consultar las sentencias
     try:
         respuesta = requests.get(
-            url=f"{API_BASE_URL}/api/v1/sentencias",
+            url=f"{API_BASE_URL}/api/v5/sentencias",
             headers={"Authorization": f"Bearer {oauth2_token}"},
             params={"creado_desde": creado_desde, "creado_hasta": creado_hasta, "limit": LIMIT},
             timeout=TIMEOUT,
@@ -228,7 +228,7 @@ def sintetizar(creado_desde, creado_hasta, sobreescribir):
         # Consultar la sentencia por su ID para obtener su texto
         try:
             respuesta = requests.get(
-                url=f"{API_BASE_URL}/api/v1/sentencias/{item['id']}",
+                url=f"{API_BASE_URL}/api/v5/sentencias/{item['id']}",
                 headers={"Authorization": f"Bearer {oauth2_token}"},
                 timeout=TIMEOUT,
             )
@@ -288,7 +288,7 @@ def sintetizar(creado_desde, creado_hasta, sobreescribir):
         # Enviar los datos RAG
         try:
             respuesta = requests.put(
-                url=f"{API_BASE_URL}/api/v1/sentencias/rag",
+                url=f"{API_BASE_URL}/api/v5/sentencias/rag",
                 headers={"Authorization": f"Bearer {oauth2_token}"},
                 data=json.dumps(data),
                 timeout=TIMEOUT,

@@ -3,6 +3,7 @@
 .env
 .DS_Store
 
+*.csv
 *.py[cod]
 
 __pycache__/

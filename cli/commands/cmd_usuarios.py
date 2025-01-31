@@ -66,7 +66,7 @@ def exportar(archivo_csv, jurisdiccionales, notarias):
             }
             try:
                 respuesta = requests.get(
-                    url=f"{API_BASE_URL}/api/v1/autoridades",
+                    url=f"{API_BASE_URL}/api/v5/autoridades",
                     headers={"Authorization": f"Bearer {oauth2_token}"},
                     params=autoridades_params,
                     timeout=TIMEOUT,
@@ -91,7 +91,7 @@ def exportar(archivo_csv, jurisdiccionales, notarias):
                     usuarios_params = {"autoridad_clave": autoridad_item["clave"], "limit": LIMIT, "offset": usuarios_offset}
                     try:
                         respuesta = requests.get(
-                            url=f"{API_BASE_URL}/api/v1/usuarios",
+                            url=f"{API_BASE_URL}/api/v5/usuarios",
                             headers={"Authorization": f"Bearer {oauth2_token}"},
                             params=usuarios_params,
                             timeout=TIMEOUT,
