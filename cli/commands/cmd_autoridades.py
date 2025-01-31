@@ -55,7 +55,7 @@ def exportar(archivo_csv, jurisdiccionales, notarias):
         while True:
             try:
                 respuesta = requests.get(
-                    url=f"{API_BASE_URL}/api/v1/autoridades",
+                    url=f"{API_BASE_URL}/api/v5/autoridades",
                     headers={"Authorization": f"Bearer {oauth2_token}"},
                     params={"es_jurisdiccional": es_jurisdiccional, "es_notaria": es_notaria, "limit": LIMIT, "offset": offset},
                     timeout=TIMEOUT,
