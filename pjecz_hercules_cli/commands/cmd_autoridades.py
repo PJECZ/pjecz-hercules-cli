@@ -11,8 +11,9 @@ import sys
 import click
 from dotenv import load_dotenv
 import requests
+from tabulate import tabulate
 
-from lib.authentications import get_auth_token
+from pjecz_hercules_cli.dependencies.authentications import get_auth_token
 
 load_dotenv()
 API_BASE_URL = os.getenv("API_BASE_URL")
@@ -95,4 +96,51 @@ def exportar(archivo_csv, jurisdiccionales, notarias):
     click.echo(click.style(f"Fueron agregadas {contador} autoridades a {archivo_csv}", fg="green"))
 
 
+@click.command()
+@click.option("--notarias", is_flag=True, help="Solo Notarías")
+def mostrar(notarias):
+    """Mostrar tabla de autoridades"""
+
+    # Obtener el token
+    try:
+        oauth2_token = get_auth_token()
+    except Exception as error:
+        click.echo(click.style(str(error), fg="red"))
+        sys.exit(1)
+
+    # Definir parámetros
+    params = {"limit": LIMIT}
+    if notarias:
+        params["es_notaria"] = 1
+
+    # Consultar
+    try:
+        respuesta = requests.get(
+            url=f"{API_BASE_URL}/api/v5/autoridades",
+            headers={"Authorization": f"Bearer {oauth2_token}"},
+            params=params,
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.RequestException as error:
+        click.echo(click.style(str(error), fg="red"))
+        sys.exit(1)
+    if respuesta.status_code != 200:
+        click.echo(click.style(str(respuesta), fg="red"))
+        sys.exit(1)
+
+    # Si hubo un error
+    contenido = respuesta.json()
+    if contenido["success"] is False:
+        click.echo(click.style(contenido["message"], fg="red"))
+        sys.exit(1)
+
+    # Mostrar la tabla con los datos de los distritos
+    tabla = []
+    encabezados = ["clave", "descripcion_corta", "es_notaria"]
+    for item in contenido["data"]:
+        tabla.append([item[encabezado] for encabezado in encabezados])
+    click.echo(tabulate(tabla, headers=encabezados))
+
+
 cli.add_command(exportar)
+cli.add_command(mostrar)

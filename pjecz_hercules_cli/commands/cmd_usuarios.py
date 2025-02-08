@@ -16,7 +16,7 @@ import click
 from dotenv import load_dotenv
 import requests
 
-from lib.authentications import get_auth_token
+from pjecz_hercules_cli.dependencies.authentications import get_auth_token
 
 load_dotenv()
 API_BASE_URL = os.getenv("API_BASE_URL")
