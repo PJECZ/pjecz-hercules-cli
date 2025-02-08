@@ -5,6 +5,7 @@ PDF Tools
 from pathlib import Path
 
 from pypdf import PdfReader
+from unidecode import unidecode
 
 from .exceptions import MyAnyError, MyFileNotFoundError, MyFileNotAllowedError
 
@@ -26,4 +27,4 @@ def extraer_texto_de_archivo_pdf(archivo: str) -> str:
         texto = " ".join(paginas_textos)
     except Exception as error:
         raise MyAnyError(error) from error
-    return texto
+    return unidecode(texto)

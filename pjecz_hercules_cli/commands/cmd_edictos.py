@@ -29,6 +29,7 @@ LIMIT = int(os.getenv("LIMIT"))
 TIMEOUT = int(os.getenv("TIMEOUT"))
 EDICTOS_BASE_DIR = os.getenv("EDICTOS_BASE_DIR")
 EDICTOS_GCS_BASE_URL = os.getenv("EDICTOS_GCS_BASE_URL")
+MOSTRAR_CARACTERES = int(os.getenv("MOSTRAR_CARACTERES"))
 
 
 @click.group()
@@ -39,8 +40,9 @@ def cli():
 @click.command()
 @click.argument("creado_desde", type=str)
 @click.argument("creado_hasta", type=str)
-@click.option("--sobreescribir", is_flag=True)
-def analizar(creado_desde, creado_hasta, sobreescribir):
+@click.option("--probar", is_flag=True, help="Modo de prueba, sin cambios")
+@click.option("--sobreescribir", is_flag=True, help="Sobreescribe lo ya analizado")
+def analizar(creado_desde, creado_hasta, probar, sobreescribir):
     """Analizar edictos"""
     click.echo("Analizando edictos")
 
@@ -64,7 +66,7 @@ def analizar(creado_desde, creado_hasta, sobreescribir):
     # Bucle por las consultas
     while True:
 
-        # Consultar los edictos
+        # Consultar
         try:
             respuesta = requests.get(
                 url=f"{API_BASE_URL}/api/v5/edictos",
@@ -104,7 +106,7 @@ def analizar(creado_desde, creado_hasta, sobreescribir):
             if archivo_ruta_existe is False:
                 click.echo(click.style(f"{item['archivo']} NO existe", fg="yellow"))
                 continue
-            click.echo(click.style(f"{item['archivo']} ", fg="green"), nl=False)
+            click.echo(click.style(f"{item['archivo'][:20]}... ", fg="green"), nl=False)
 
             # Extraer el texto del archivo PDF
             try:
@@ -117,7 +119,7 @@ def analizar(creado_desde, creado_hasta, sobreescribir):
             if texto.strip() == "":
                 click.echo(click.style("No tiene texto", fg="yellow"))
                 continue
-            click.echo(click.style(f"Longitud {len(texto)} ", fg="green"), nl=False)
+            click.echo(click.style(f"{texto[:MOSTRAR_CARACTERES]}... = {len(texto)} ", fg="blue"), nl=False)
 
             # Definir los datos RAG a enviar
             data = {
@@ -132,30 +134,35 @@ def analizar(creado_desde, creado_hasta, sobreescribir):
                 "categorias": None,
             }
 
-            # Enviar los datos RAG
-            try:
-                respuesta = requests.put(
-                    url=f"{API_BASE_URL}/api/v5/edictos/rag",
-                    headers={"Authorization": f"Bearer {oauth2_token}"},
-                    data=json.dumps(data),
-                    timeout=TIMEOUT,
-                )
-            except requests.exceptions.RequestException as error:
-                click.echo(click.style(str(error), fg="red"))
-                sys.exit(1)
-            if respuesta.status_code != 200:
-                click.echo(click.style(str(respuesta.content), fg="red"))
-                sys.exit(1)
+            # Si NO está en modo de pruebas
+            if probar is False:
+                # Enviar los datos RAG
+                try:
+                    respuesta = requests.put(
+                        url=f"{API_BASE_URL}/api/v5/edictos/rag",
+                        headers={"Authorization": f"Bearer {oauth2_token}"},
+                        data=json.dumps(data),
+                        timeout=TIMEOUT,
+                    )
+                except requests.exceptions.RequestException as error:
+                    click.echo(click.style(str(error), fg="red"))
+                    sys.exit(1)
+                if respuesta.status_code != 200:
+                    click.echo(click.style(str(respuesta.content), fg="red"))
+                    sys.exit(1)
 
-            # Si hubo un error
-            resultado = respuesta.json()
-            if resultado["success"] is False:
-                click.echo(click.style(resultado["message"], fg="yellow"))
-                continue
+                # Si hubo un error
+                resultado = respuesta.json()
+                if resultado["success"] is False:
+                    click.echo(click.style(resultado["message"], fg="yellow"))
+                    continue
 
             # Incrementar el contador
             contador += 1
-            click.echo(click.style("ENVIADO", fg="white"))
+            if probar is False:
+                click.echo(click.style("ENVIADO", fg="white"))
+            else:
+                click.echo(click.style("PROBADO", fg="white"))
 
         # Incrementar el offset y terminar el bucle si lo rebasamos
         offset += LIMIT
@@ -169,8 +176,9 @@ def analizar(creado_desde, creado_hasta, sobreescribir):
 @click.command()
 @click.argument("creado_desde", type=str)
 @click.argument("creado_hasta", type=str)
-@click.option("--sobreescribir", is_flag=True)
-def sintetizar(creado_desde, creado_hasta, sobreescribir):
+@click.option("--probar", is_flag=True, help="Modo de prueba, sin cambios")
+@click.option("--sobreescribir", is_flag=True, help="Sobreescribe lo ya sintetizado")
+def sintetizar(creado_desde, creado_hasta, probar, sobreescribir):
     """Sintetizar edictos"""
     click.echo("Sintetizando edictos")
 
@@ -203,7 +211,7 @@ def sintetizar(creado_desde, creado_hasta, sobreescribir):
     # Bucle por las consultas
     while True:
 
-        # Consultar los edictos
+        # Consultar
         try:
             respuesta = requests.get(
                 url=f"{API_BASE_URL}/api/v5/edictos",
@@ -241,7 +249,7 @@ def sintetizar(creado_desde, creado_hasta, sobreescribir):
             # Consultar por su ID para obtener su texto
             try:
                 respuesta = requests.get(
-                    url=f"{API_BASE_URL}/api/v5/sentencias/{item['id']}",
+                    url=f"{API_BASE_URL}/api/v5/edictos/{item['id']}",
                     headers={"Authorization": f"Bearer {oauth2_token}"},
                     timeout=TIMEOUT,
                 )
@@ -253,18 +261,24 @@ def sintetizar(creado_desde, creado_hasta, sobreescribir):
                 sys.exit(1)
             detalle = respuesta.json()
 
+            # Si hubo un error
+            contenido = respuesta.json()
+            if contenido["success"] is False:
+                click.echo(click.style(contenido["message"], fg="red"))
+                sys.exit(1)
+
             # Validar que tiene el texto
-            sentencia = detalle["data"]
-            if "texto" not in sentencia["rag_analisis"]:
+            datos = detalle["data"]
+            if "texto" not in datos["rag_analisis"]:
                 click.echo(click.style("No tiene 'texto' el análisis", fg="yellow"))
                 continue
-            texto = sentencia["rag_analisis"]["texto"]
+            texto = datos["rag_analisis"]["texto"]
             if texto.strip() == "":
                 click.echo(click.style("No tiene texto, está vacío", fg="yellow"))
                 continue
 
             # Mostrar en pantalla la longitud de caracteres
-            click.echo(click.style(f"Longitud {len(texto)} ", fg="green"), nl=False)
+            click.echo(click.style(f"{texto[:MOSTRAR_CARACTERES]}… = {len(texto)} ", fg="blue"), nl=False)
 
             # Definir los mensajes a enviar a OpenAI
             mensajes = [
@@ -298,30 +312,35 @@ def sintetizar(creado_desde, creado_hasta, sobreescribir):
             # Mostrar en pantalla e total de tokens
             click.echo(click.style(f"Tokens {data['sintesis']['tokens_total']} ", fg="magenta"), nl=False)
 
-            # Enviar los datos RAG
-            try:
-                respuesta = requests.put(
-                    url=f"{API_BASE_URL}/api/v5/edictos/rag",
-                    headers={"Authorization": f"Bearer {oauth2_token}"},
-                    data=json.dumps(data),
-                    timeout=TIMEOUT,
-                )
-            except requests.exceptions.RequestException as error:
-                click.echo(click.style(str(error), fg="red"))
-                sys.exit(1)
-            if respuesta.status_code != 200:
-                click.echo(click.style(str(respuesta.content), fg="red"))
-                sys.exit(1)
+            # Si NO está en modo de pruebas
+            if probar is False:
+                # Enviar los datos RAG
+                try:
+                    respuesta = requests.put(
+                        url=f"{API_BASE_URL}/api/v5/edictos/rag",
+                        headers={"Authorization": f"Bearer {oauth2_token}"},
+                        data=json.dumps(data),
+                        timeout=TIMEOUT,
+                    )
+                except requests.exceptions.RequestException as error:
+                    click.echo(click.style(str(error), fg="red"))
+                    sys.exit(1)
+                if respuesta.status_code != 200:
+                    click.echo(click.style(str(respuesta.content), fg="red"))
+                    sys.exit(1)
 
-            # Si hubo un error
-            resultado = respuesta.json()
-            if resultado["success"] is False:
-                click.echo(click.style(resultado["message"], fg="yellow"))
-                continue
+                # Si hubo un error
+                resultado = respuesta.json()
+                if resultado["success"] is False:
+                    click.echo(click.style(resultado["message"], fg="yellow"))
+                    continue
 
             # Incrementar el contador
             contador += 1
-            click.echo(click.style("ENVIADO", fg="white"))
+            if probar is False:
+                click.echo(click.style("ENVIADO", fg="white"))
+            else:
+                click.echo(click.style("PROBADO", fg="white"))
 
         # Incrementar el offset y terminar el bucle si lo rebasamos
         offset += LIMIT
