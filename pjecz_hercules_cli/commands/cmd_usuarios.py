@@ -1,11 +1,5 @@
 """
-Cmd Usuarios
-
-- exportar: Exportar Usuarios a un archivo CSV con
-    - distrito_nombre_corto
-    - autoridad_descripcion_corta
-    - usuario_email
-    - directorio_edictos
+Command Usuarios
 """
 
 import csv

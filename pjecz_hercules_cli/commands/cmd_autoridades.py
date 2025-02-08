@@ -1,7 +1,5 @@
 """
-Cmd Autoridades
-
-- exportar: Exportar Autoridades a un archivo CSV
+Command Autoridades
 """
 
 import csv
