@@ -297,14 +297,19 @@ def sintetizar(creado_desde, creado_hasta, probar, sobreescribir):
                 click.echo(click.style(f"Error al sintetizar: {str(error)}", fg="yellow"))
                 continue
 
+            # Mostrar en pantalla un fragmento de la sintesis
+            sintesis = chat_response.choices[0].message.content
+            tokens_total = chat_response.usage.total_tokens
+            click.echo(click.style(f"{sintesis[:MOSTRAR_CARACTERES]}… = {tokens_total} ", fg="magenta"), nl=False)
+
             # Definir los datos RAG a enviar
             data = {
                 "id": item["id"],
                 "analisis": None,
                 "sintesis": {
                     "modelo": chat_response.model,
-                    "sintesis": chat_response.choices[0].message.content,
-                    "tokens_total": chat_response.usage.total_tokens,
+                    "sintesis": sintesis,
+                    "tokens_total": tokens_total,
                 },
                 "categorias": None,
             }
