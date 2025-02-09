@@ -66,7 +66,7 @@ def analizar(creado_desde, creado_hasta, probar, sobreescribir):
     # Bucle por las consultas
     while True:
 
-        # Consultar
+        # Consultar sentencias
         try:
             respuesta = requests.get(
                 url=f"{API_BASE_URL}/api/v5/sentencias",
@@ -80,15 +80,15 @@ def analizar(creado_desde, creado_hasta, probar, sobreescribir):
         if respuesta.status_code != 200:
             click.echo(click.style(str(respuesta), fg="red"))
             sys.exit(1)
+        paginado = respuesta.json()
 
         # Si hubo un error
-        contenido = respuesta.json()
-        if contenido["success"] is False:
-            click.echo(click.style(contenido["message"], fg="red"))
+        if paginado["success"] is False:
+            click.echo(click.style(paginado["message"], fg="red"))
             sys.exit(1)
 
         # Bucle por los datos
-        for item in contenido["data"]:
+        for item in paginado["data"]:
             click.echo(click.style(f"[{item['id']}] ", fg="white"), nl=False)
 
             # Si ya fue analizada, se omite
@@ -166,7 +166,7 @@ def analizar(creado_desde, creado_hasta, probar, sobreescribir):
 
         # Incrementar el offset y terminar el bucle si lo rebasamos
         offset += LIMIT
-        if offset >= contenido["total"]:
+        if offset >= paginado["total"]:
             break
 
     # Mostrar el mensaje de término
@@ -211,7 +211,7 @@ def sintetizar(creado_desde, creado_hasta, probar, sobreescribir):
     # Bucle por las consultas
     while True:
 
-        # Consultar
+        # Consultar sentencias
         try:
             respuesta = requests.get(
                 url=f"{API_BASE_URL}/api/v5/sentencias",
@@ -225,15 +225,15 @@ def sintetizar(creado_desde, creado_hasta, probar, sobreescribir):
         if respuesta.status_code != 200:
             click.echo(click.style(str(respuesta), fg="red"))
             sys.exit(1)
+        paginado = respuesta.json()
 
         # Si hubo un error
-        contenido = respuesta.json()
-        if contenido["success"] is False:
-            click.echo(click.style(contenido["message"], fg="red"))
+        if paginado["success"] is False:
+            click.echo(click.style(paginado["message"], fg="red"))
             sys.exit(1)
 
         # Bucle por los datos
-        for item in contenido["data"]:
+        for item in paginado["data"]:
             click.echo(click.style(f"[{item['id']}] ", fg="white"), nl=False)
 
             # Si NO ha sido analizada, se omite
@@ -269,16 +269,22 @@ def sintetizar(creado_desde, creado_hasta, probar, sobreescribir):
 
             # Validar que tiene el texto
             datos = detalle["data"]
-            if "texto" not in datos["rag_analisis"]:
-                click.echo(click.style("No tiene 'texto' el análisis", fg="yellow"))
+            if datos is None:
+                click.echo(click.style("No tiene 'data'", fg="yellow"))
+                continue
+            if "rag_analisis" not in datos or datos["rag_analisis"] is None:
+                click.echo(click.style("No tiene 'rag_analisis' o es nulo", fg="yellow"))
+                continue
+            if "texto" not in datos["rag_analisis"] or datos["rag_analisis"]["texto"] is None:
+                click.echo(click.style("No tiene 'texto' el análisis o es nulo", fg="yellow"))
                 continue
             texto = datos["rag_analisis"]["texto"]
             if texto.strip() == "":
-                click.echo(click.style("No tiene texto, está vacío", fg="yellow"))
+                click.echo(click.style("No hay texto para sintetizar, está vacío", fg="yellow"))
                 continue
 
             # Mostrar en pantalla la longitud de caracteres
-            click.echo(click.style(f"{texto[:MOSTRAR_CARACTERES]}… = ", fg="blue"), nl=False)
+            click.echo(click.style(f"{texto[:MOSTRAR_CARACTERES]}… = {len(texto)} ", fg="blue"), nl=False)
 
             # Definir los mensajes a enviar a OpenAI
             mensajes = [
@@ -314,9 +320,6 @@ def sintetizar(creado_desde, creado_hasta, probar, sobreescribir):
                 "categorias": None,
             }
 
-            # Mostrar en pantalla e total de tokens
-            click.echo(click.style(f"Tokens {data['sintesis']['tokens_total']} ", fg="magenta"), nl=False)
-
             # Si NO está en modo de pruebas
             if probar is False:
                 # Enviar los datos RAG
@@ -349,7 +352,7 @@ def sintetizar(creado_desde, creado_hasta, probar, sobreescribir):
 
         # Incrementar el offset y terminar el bucle si lo rebasamos
         offset += LIMIT
-        if offset >= contenido["total"]:
+        if offset >= paginado["total"]:
             break
 
     # Mostrar el mensaje de término

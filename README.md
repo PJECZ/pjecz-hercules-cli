@@ -34,7 +34,7 @@ Escriba las siguientes variables cambiándolas a sus requerimientos
 # Ollama
 OPENAI_API_KEY="NONE"
 OPENAI_ENDPOINT="http://127.0.0.1:11434/v1"
-OPENAI_MODEL="llama3.2"
+OPENAI_MODEL="dolphin-mistral"
 OPENAI_ORG_ID="NONE"
 OPENAI_PROJECT_ID="NONE"
 OPENAI_PROMPT=""
