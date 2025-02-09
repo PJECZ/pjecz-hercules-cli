@@ -7,7 +7,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from lib.exceptions import MyAuthenticationError
+from .exceptions import MyAuthenticationError
 
 # Cargar las variables de entorno
 load_dotenv()

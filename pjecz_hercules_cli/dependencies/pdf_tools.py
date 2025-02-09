@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from lib.exceptions import MyAnyError, MyFileNotFoundError, MyFileNotAllowedError
+from .exceptions import MyAnyError, MyFileNotFoundError, MyFileNotAllowedError
 
 
 def extraer_texto_de_archivo_pdf(archivo: str) -> str:

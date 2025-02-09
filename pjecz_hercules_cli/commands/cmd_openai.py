@@ -1,9 +1,5 @@
 """
-Cmd OpenAI
-
-- preguntar
-- extraer
-- sintetizar
+Command OpenAI
 """
 
 import os
@@ -13,10 +9,9 @@ import click
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from lib.exceptions import MyAnyError
-from lib.pdf_tools import extraer_texto_de_archivo_pdf
+from pjecz_hercules_cli.dependencies.exceptions import MyAnyError
+from pjecz_hercules_cli.dependencies.pdf_tools import extraer_texto_de_archivo_pdf
 
-# Cargar variables de entorno
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_ENDPOINT = os.getenv("OPENAI_ENDPOINT")

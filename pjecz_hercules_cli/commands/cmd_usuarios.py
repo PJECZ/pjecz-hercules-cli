@@ -1,11 +1,5 @@
 """
-Cmd Usuarios
-
-- exportar: Exportar Usuarios a un archivo CSV con
-    - distrito_nombre_corto
-    - autoridad_descripcion_corta
-    - usuario_email
-    - directorio_edictos
+Command Usuarios
 """
 
 import csv
@@ -16,7 +10,7 @@ import click
 from dotenv import load_dotenv
 import requests
 
-from lib.authentications import get_auth_token
+from pjecz_hercules_cli.dependencies.authentications import get_auth_token
 
 load_dotenv()
 API_BASE_URL = os.getenv("API_BASE_URL")

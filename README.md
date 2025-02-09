@@ -16,7 +16,7 @@ Ingresar al entorno virtual
 . .venv/bin/activate
 ```
 
-Actualizar e instalar **poetry**
+Actualizar e instalar **poetry 2**
 
 ```bash
 pip install --upgrade pip setuptools wheel poetry
@@ -28,7 +28,7 @@ Crear un archivo para las variables de entorno
 nano .env
 ```
 
-Escriba las siguientes variables cambiándolas a su equipo
+Escriba las siguientes variables cambiándolas a sus requerimientos
 
 ```ini
 # Ollama
@@ -48,11 +48,11 @@ TIMEOUT=20
 
 # Edictos
 EDICTOS_BASE_DIR="/mnt/unidad/archivista/Edictos"
-EDICTOS_GCS_BASE_URL="https://storage.googleapis.com/edictos"
+EDICTOS_GCS_BASE_URL="https://storage.googleapis.com/XXXX/XXXX"
 
 # Sentencias
 SENTENCIAS_BASE_DIR="/mnt/unidad/archivista/Sentencias"
-SENTENCIAS_GCS_BASE_URL="https://storage.googleapis.com/sentencias"
+SENTENCIAS_GCS_BASE_URL="https://storage.googleapis.com/XXXX/XXXX"
 ```
 
 Instalar en este entorno el comando `hercules`
