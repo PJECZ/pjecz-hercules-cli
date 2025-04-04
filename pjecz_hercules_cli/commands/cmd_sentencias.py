@@ -2,6 +2,7 @@
 Command Sentencias
 """
 
+import concurrent.futures
 import json
 from pathlib import Path
 import os
@@ -12,6 +13,7 @@ import click
 from dotenv import load_dotenv
 from openai import OpenAI
 import requests
+from tqdm import tqdm
 
 from pjecz_hercules_cli.dependencies.authentications import get_auth_token
 from pjecz_hercules_cli.dependencies.exceptions import MyAnyError
@@ -31,18 +33,64 @@ SENTENCIAS_BASE_DIR = os.getenv("SENTENCIAS_BASE_DIR")
 SENTENCIAS_GCS_BASE_URL = os.getenv("SENTENCIAS_GCS_BASE_URL")
 MOSTRAR_CARACTERES = int(os.getenv("MOSTRAR_CARACTERES"))
 
+HILOS_POR_DEFECTO = os.cpu_count() or 4
+
 
 @click.group()
 def cli():
     """Sentencias"""
 
 
+def analizar_archivo_pdf_hilo(id: int, archivo_ruta: Path, autor: str) -> (int, str, int):
+    """Analizar un archivo PDF en un hilo, entrega el ID, el texto extraído, el tamaño del archivo y el autor"""
+    if bool(archivo_ruta.exists() and archivo_ruta.is_file()) is False:
+        raise MyAnyError(f"El archivo {archivo_ruta} no existe o no es un archivo")
+    try:
+        texto = extraer_texto_de_archivo_pdf(str(archivo_ruta))
+    except MyAnyError as error:
+        raise MyAnyError(f"Error al extraer texto del archivo {archivo_ruta.name}: {str(error)}") from error
+    if texto.strip() == "":
+        raise MyAnyError(f"El archivo {archivo_ruta.name} no tiene texto")
+    return id, texto, os.path.getsize(archivo_ruta), autor
+
+
+def enviar_analisis_rag(id: int, texto: str, archivo_tamanio: int, autor: str, oauth2_token: str) -> bool:
+    """Enviar el análisis RAG a la API"""
+    data = {
+        "id": id,
+        "analisis": {
+            "archivo_tamanio": archivo_tamanio,
+            "autor": autor,
+            "longitud": len(texto),
+            "texto": texto,
+        },
+        "sintesis": None,
+        "categorias": None,
+    }
+    try:
+        respuesta = requests.put(
+            url=f"{API_BASE_URL}/api/v5/sentencias/rag",
+            headers={"Authorization": f"Bearer {oauth2_token}"},
+            data=json.dumps(data),
+            timeout=TIMEOUT,
+        )
+    except requests.exceptions.RequestException as error:
+        raise MyAnyError(error) from error
+    if respuesta.status_code != 200:
+        raise MyAnyError(f"Status Code {respuesta.status_code}: {respuesta.content}")
+    contenido = respuesta.json()
+    if "success" not in contenido or "message" not in contenido:
+        raise MyAnyError(f"Respuesta inesperada: {contenido}")
+    return bool(contenido["success"])
+
+
 @click.command()
 @click.argument("creado_desde", type=str)
 @click.argument("creado_hasta", type=str)
+@click.option("--hilos", type=int, default=HILOS_POR_DEFECTO, help="Número de hilos a usar")
 @click.option("--probar", is_flag=True, help="Modo de prueba, sin cambios")
 @click.option("--sobreescribir", is_flag=True, help="Sobreescribe lo ya analizado")
-def analizar(creado_desde, creado_hasta, probar, sobreescribir):
+def analizar(creado_desde, creado_hasta, hilos, probar, sobreescribir):
     """Analizar sentencias"""
     click.echo("Analizando sentencias")
 
@@ -87,82 +135,34 @@ def analizar(creado_desde, creado_hasta, probar, sobreescribir):
             click.echo(click.style(paginado["message"], fg="red"))
             sys.exit(1)
 
-        # Bucle por los datos
-        for item in paginado["data"]:
-            click.echo(click.style(f"[{item['id']}] ", fg="white"), nl=False)
+        # Inicializar la lista de futuros
+        futures = []
 
-            # Si ya fue analizada, se omite
-            if sobreescribir is False and item["rag_fue_analizado_tiempo"] is not None:
-                click.echo(click.style("Se omite porque ya fue analizada", fg="yellow"))
-                continue
-
-            # Definir la ruta al archivo pdf reemplazando el inicio del url con el directorio
-            archivo_ruta = Path(SENTENCIAS_BASE_DIR + unquote(item["url"][len(SENTENCIAS_GCS_BASE_URL) :]))
-
-            # Verificar que exista el archivo pdf
-            archivo_ruta_existe = bool(archivo_ruta.exists() and archivo_ruta.is_file())
-
-            # Si NO existe se muestra en color amarillo y se omite, de lo contario se muestra en color verde
-            if archivo_ruta_existe is False:
-                click.echo(click.style(f"{item['archivo']} NO existe", fg="yellow"))
-                continue
-            click.echo(click.style(f"{item['archivo'][:20]}… ", fg="green"), nl=False)
-
-            # Extraer el texto del archivo PDF
-            try:
-                texto = extraer_texto_de_archivo_pdf(str(archivo_ruta))
-            except MyAnyError as error:
-                click.echo(click.style(str(error), fg="yellow"))
-                continue
-
-            # Si no hay texto, se omite
-            if texto.strip() == "":
-                click.echo(click.style("No tiene texto", fg="yellow"))
-                continue
-            click.echo(click.style(f"{texto[:MOSTRAR_CARACTERES]}… = {len(texto)} ", fg="blue"), nl=False)
-
-            # Definir los datos RAG a enviar
-            data = {
-                "id": item["id"],
-                "analisis": {
-                    "archivo_tamanio": archivo_ruta.stat().st_size,
-                    "autor": item["autoridad_clave"],
-                    "longitud": len(texto),
-                    "texto": texto,
-                },
-                "sintesis": None,
-                "categorias": None,
-            }
-
-            # Si NO está en modo de pruebas
-            if probar is False:
-                # Enviar los datos RAG
-                try:
-                    respuesta = requests.put(
-                        url=f"{API_BASE_URL}/api/v5/sentencias/rag",
-                        headers={"Authorization": f"Bearer {oauth2_token}"},
-                        data=json.dumps(data),
-                        timeout=TIMEOUT,
-                    )
-                except requests.exceptions.RequestException as error:
-                    click.echo(click.style(str(error), fg="red"))
-                    sys.exit(1)
-                if respuesta.status_code != 200:
-                    click.echo(click.style(str(respuesta.content), fg="red"))
-                    sys.exit(1)
-
-                # Si hubo un error
-                resultado = respuesta.json()
-                if resultado["success"] is False:
-                    click.echo(click.style(resultado["message"], fg="yellow"))
+        # Usar ThreadPoolExecutor para manejar múltiples hilos
+        with concurrent.futures.ThreadPoolExecutor(max_workers=hilos) as executor:
+            # Bucle por los registros de la consulta
+            for item in paginado["data"]:
+                # Si ya fue analizada, se omite
+                if sobreescribir is False and item["rag_fue_analizado_tiempo"] is not None:
                     continue
 
-            # Incrementar el contador
-            contador += 1
-            if probar is False:
-                click.echo(click.style("ENVIADO", fg="white"))
-            else:
-                click.echo(click.style("PROBADO", fg="white"))
+                # Definir la ruta al archivo pdf reemplazando el inicio del url con el directorio
+                archivo_ruta = Path(SENTENCIAS_BASE_DIR + unquote(item["url"][len(SENTENCIAS_GCS_BASE_URL) :]))
+
+                # Entregar las tareas al multi hilo para extraer los textos de los archivos PDF en paralelo
+                future = executor.submit(analizar_archivo_pdf_hilo, item["id"], archivo_ruta, item["autoridad_clave"])
+                futures.append(future)
+
+            # Bucle por los resultados de los hilos
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Analizando archivos PDF"):
+                try:
+                    id, texto, archivo_tamanio, autor = future.result()
+                    if probar is False:
+                        enviar_analisis_rag(id, texto, archivo_tamanio, autor, oauth2_token)
+                except MyAnyError as error:
+                    click.echo(click.style(str(error), fg="yellow"))
+                    continue
+                contador += 1
 
         # Incrementar el offset y terminar el bucle si lo rebasamos
         offset += LIMIT
@@ -170,7 +170,7 @@ def analizar(creado_desde, creado_hasta, probar, sobreescribir):
             break
 
     # Mostrar el mensaje de término
-    click.echo(click.style(f"Fueron analizadas {contador} sentencias", fg="green"))
+    click.echo(click.style(f"Fueron analizadas {contador} de {paginado['total']} sentencias", fg="green"))
 
 
 @click.command()
